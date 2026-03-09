@@ -6,12 +6,14 @@ import com.sprint.mission.discodeit.common.exception.binarycontent.BinaryContent
 import com.sprint.mission.discodeit.common.exception.binarycontent.InvalidBinaryContentRequestException;
 import com.sprint.mission.discodeit.common.exception.ErrorCode;
 import com.sprint.mission.discodeit.dto.request.binarycontent.BinaryContentCreateRequestDto;
+import com.sprint.mission.discodeit.dto.response.binarycontent.BinaryContentEventDto;
 import com.sprint.mission.discodeit.dto.response.binarycontent.BinaryContentResponseDto;
 import com.sprint.mission.discodeit.entity.BinaryContent;
 import com.sprint.mission.discodeit.entity.BinaryContentStatus;
 import com.sprint.mission.discodeit.mapper.BinaryContentMapper;
 import com.sprint.mission.discodeit.repository.BinaryContentRepository;
 import com.sprint.mission.discodeit.service.BinaryContentService;
+import com.sprint.mission.discodeit.service.sse.SseService;
 import com.sprint.mission.discodeit.storage.BinaryContentStorage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +36,7 @@ public class BasicBinaryContentService implements BinaryContentService {
     private final BinaryContentStorage binaryContentStorage;
 
     private final ApplicationEventPublisher eventPublisher;
+    private final SseService sseService;
 
     @Transactional
     @Override
@@ -141,6 +144,10 @@ public class BasicBinaryContentService implements BinaryContentService {
         BinaryContent saved = binaryContentRepository.save(binaryContent);
         log.info("BinaryContent status updated. binaryContentId = {}, status = {}", saved.getId(), saved.getStatus());
 
-        return binaryContentMapper.toDto(saved);
+        BinaryContentResponseDto dto = binaryContentMapper.toDto(saved);
+        BinaryContentEventDto eventDto = new BinaryContentEventDto(saved.getId(), saved.getStatus());
+        sseService.broadcast("binaryContent.updated", eventDto);
+
+        return dto;
     }
 }

@@ -14,6 +14,7 @@ import com.sprint.mission.discodeit.entity.*;
 import com.sprint.mission.discodeit.mapper.ChannelMapper;
 import com.sprint.mission.discodeit.repository.*;
 import com.sprint.mission.discodeit.service.ChannelService;
+import com.sprint.mission.discodeit.service.sse.SseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -38,6 +39,7 @@ public class BasicChannelService implements ChannelService {
     private final ChannelMapper channelMapper;
     private final SessionOnlineChecker sessionOnlineChecker;
     private final JwtOnlineChecker jwtOnlineChecker;
+    private final SseService sseService;
 
     @CacheEvict(cacheNames = "userChannelsCache", allEntries = true)
     @PreAuthorize("hasRole('CHANNEL_MANAGER')")
@@ -68,7 +70,9 @@ public class BasicChannelService implements ChannelService {
         List<User> userList = participants(save);
 
         log.info("채널이 생성되었습니다. channelId = {}", save.getId());
-        return channelMapper.toDto(save,lastMessageAt(save),userList,userOnlineMap(userList));
+        ChannelResponseDto dto = channelMapper.toDto(save, lastMessageAt(save), userList, userOnlineMap(userList));
+        sseService.broadcast("channels.created", dto);
+        return dto;
     }
 
     @CacheEvict(cacheNames = "userChannelsCache", allEntries = true)
@@ -106,7 +110,9 @@ public class BasicChannelService implements ChannelService {
         List<User> userList = participants(save);
 
         log.info("1:1 채널이 생성되었습니다.  channelId = {}", save.getId());
-        return channelMapper.toDto(save,lastMessageAt(save), userList, userOnlineMap(userList));
+        ChannelResponseDto dto = channelMapper.toDto(save, lastMessageAt(save), userList, userOnlineMap(userList));
+        sseService.broadcast("channels.created", dto);
+        return dto;
     }
 
     @Override
@@ -190,7 +196,9 @@ public class BasicChannelService implements ChannelService {
         List<User> userList = participants(channel);
 
         log.info("채널이 수정되었습니다. channelId = {}", save.getId());
-        return channelMapper.toDto(save,lastMessageAt(save),userList,userOnlineMap(userList));
+        ChannelResponseDto dto = channelMapper.toDto(save, lastMessageAt(save), userList, userOnlineMap(userList));
+        sseService.broadcast("channels.updated", dto);
+        return dto;
     }
 
     @CacheEvict(cacheNames = "userChannelsCache", allEntries = true)
@@ -205,6 +213,9 @@ public class BasicChannelService implements ChannelService {
         if(!channelRepository.existsById(channelId)) {
             throw new ChannelNotFoundException(channelId);
         }
+
+        ChannelResponseDto deletedChannel = get(channelId);
+
         // 메세지 제거 + 첨부 파일 제거
         List<Message> message = messageRepository.findByChannelId(Objects.requireNonNull(channelId));
         messageRepository.deleteAll(message);
@@ -214,6 +225,7 @@ public class BasicChannelService implements ChannelService {
 
         // 채널 제거
         channelRepository.deleteById(channelId);
+        sseService.broadcast("channels.deleted", deletedChannel);
         log.info("채널이 제거되었습니다. channelId = {}", channelId);
     }
 

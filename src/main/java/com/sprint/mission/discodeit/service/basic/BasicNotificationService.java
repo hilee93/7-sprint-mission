@@ -10,6 +10,7 @@ import com.sprint.mission.discodeit.mapper.NotificationMapper;
 import com.sprint.mission.discodeit.repository.NotificationRepository;
 import com.sprint.mission.discodeit.repository.UserRepository;
 import com.sprint.mission.discodeit.service.NotificationService;
+import com.sprint.mission.discodeit.service.sse.SseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -28,6 +29,7 @@ public class BasicNotificationService implements NotificationService {
     private final NotificationRepository notificationRepository;
     private final NotificationMapper notificationMapper;
     private final UserRepository userRepository;
+    private final SseService sseService;
 
     @Override
     @Cacheable(cacheNames = "notificationListCache", key = "#receiverId")
@@ -68,7 +70,10 @@ public class BasicNotificationService implements NotificationService {
         );
 
         Notification saved = notificationRepository.save(notification);
+        NotificationDto dto = notificationMapper.toDto(saved);
 
-        return notificationMapper.toDto(saved);
+        sseService.send(List.of(receiverId), "notification.created", dto);
+
+        return dto;
     }
 }

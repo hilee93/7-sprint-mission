@@ -19,6 +19,7 @@ import com.sprint.mission.discodeit.repository.BinaryContentRepository;
 import com.sprint.mission.discodeit.repository.UserRepository;
 import com.sprint.mission.discodeit.service.BinaryContentService;
 import com.sprint.mission.discodeit.service.UserService;
+import com.sprint.mission.discodeit.service.sse.SseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -46,6 +47,7 @@ public class BasicUserService implements UserService {
     private final JwtRegistry jwtRegistry;
     private final JwtOnlineChecker jwtOnlineChecker;
     private final ApplicationEventPublisher eventPublisher;
+    private final SseService sseService;
 
     @CacheEvict(cacheNames = "userListCache", key = "'all'")
     @Transactional
@@ -93,8 +95,11 @@ public class BasicUserService implements UserService {
 
         User save = userRepository.save(user);
 
+        UserResponseDto dto = userMapper.toDto(save, false);
+        sseService.broadcast("users.created", dto);
         log.info("유저가 생성되었습니다! userId = {}, username = {}", save.getId(), save.getUsername());
-        return userMapper.toDto(save, false);
+
+        return dto;
     }
 
     @Override
@@ -187,8 +192,11 @@ public class BasicUserService implements UserService {
         User save = userRepository.save(user);
         boolean online = jwtOnlineChecker.isOnline(user.getId());
 
+        UserResponseDto dto = userMapper.toDto(save, online);
+        sseService.broadcast("users.updated", dto);
         log.info("유저 정보가 수정되었습니다. userId = {}", save.getId());
-        return userMapper.toDto(save, online);
+
+        return dto;
     }
 
     @CacheEvict(cacheNames = "userListCache", key = "'all'")
@@ -203,8 +211,12 @@ public class BasicUserService implements UserService {
         User user = userRepository.findById(userid)
                 .orElseThrow(() -> new UserNotFoundException(userid));
 
+        UserResponseDto deletedUser = userMapper.toDto(user, false);
+
         userRepository.delete(user);
+        sseService.broadcast("users.deleted", deletedUser);
         log.info("유저가 삭제되었습니다. userId = {}", userid);
+
         return true;
     }
 
