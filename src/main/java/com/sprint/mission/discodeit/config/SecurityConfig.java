@@ -61,6 +61,7 @@ public class SecurityConfig {
                 )
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers("/api/auth/login", "/api/auth/refresh", "/api/auth/logout")
+                        .ignoringRequestMatchers("/ws/**")
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
                 )
@@ -92,7 +93,7 @@ public class SecurityConfig {
                                 "/*.map"
                         ).permitAll()
                         .requestMatchers("/mission9/**").permitAll()
-                        .requestMatchers("/misssion12/**").permitAll()
+                        .requestMatchers("/mission12/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .anyRequest().authenticated()
                 )
