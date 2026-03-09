@@ -92,6 +92,8 @@ public class SecurityConfig {
                                 "/*.map"
                         ).permitAll()
                         .requestMatchers("/mission9/**").permitAll()
+                        .requestMatchers("/misssion12/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .logout(logout -> logout
