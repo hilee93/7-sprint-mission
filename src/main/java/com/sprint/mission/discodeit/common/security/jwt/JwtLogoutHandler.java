@@ -1,5 +1,8 @@
 package com.sprint.mission.discodeit.common.security.jwt;
 
+import com.sprint.mission.discodeit.mapper.UserMapper;
+import com.sprint.mission.discodeit.repository.UserRepository;
+import com.sprint.mission.discodeit.service.sse.SseService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,6 +23,10 @@ public class JwtLogoutHandler implements LogoutHandler {
     private final JwtRegistry jwtRegistry;
     private final JwtTokenProvider jwtTokenProvider;
     private final CacheManager cacheManager;
+    private final UserRepository userRepository;
+    private final JwtOnlineChecker jwtOnlineChecker;
+    private final SseService sseService;
+    private final UserMapper userMapper;
 
     @Override
     public void logout(
@@ -61,5 +68,10 @@ public class JwtLogoutHandler implements LogoutHandler {
         if (cache != null) {
             cache.evict("all");
         }
+
+        userRepository.findById(userId).ifPresent(user -> {
+            boolean online = jwtOnlineChecker.isOnline(userId);
+            sseService.broadcast("users.updated", userMapper.toDto(user, online));
+        });
     }
 }

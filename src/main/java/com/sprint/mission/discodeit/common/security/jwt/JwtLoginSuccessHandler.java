@@ -9,6 +9,7 @@ import com.sprint.mission.discodeit.dto.response.user.UserResponseDto;
 import com.sprint.mission.discodeit.entity.User;
 import com.sprint.mission.discodeit.mapper.UserMapper;
 import com.sprint.mission.discodeit.repository.UserRepository;
+import com.sprint.mission.discodeit.service.sse.SseService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -37,6 +38,7 @@ public class JwtLoginSuccessHandler implements AuthenticationSuccessHandler {
     private final JwtRegistry jwtRegistry;
     private final JwtOnlineChecker jwtOnlineChecker;
     private final CacheManager cacheManager;
+    private final SseService sseService;
 
     @Override
     public void onAuthenticationSuccess(
@@ -55,11 +57,10 @@ public class JwtLoginSuccessHandler implements AuthenticationSuccessHandler {
 
         refreshTokenCookieManager.set(response, pair.refreshToken());
 
-        boolean online = jwtOnlineChecker.isOnline(userId);
-        UserResponseDto userDto = userMapper.toDto(user, online);
+        UserResponseDto tokenUserDto = userMapper.toDto(user, true);
 
         JwtInformation info = new JwtInformation(
-                userDto,
+                tokenUserDto,
                 pair.accessToken(),
                 jwtTokenProvider.getExpirationInstant(pair.accessToken()),
                 pair.refreshToken(),
@@ -68,12 +69,16 @@ public class JwtLoginSuccessHandler implements AuthenticationSuccessHandler {
 
         jwtRegistry.registerJwtInformation(info);
 
+        boolean online = jwtOnlineChecker.isOnline(userId);
+        UserResponseDto userDto = userMapper.toDto(user, online);
         JwtDto jwtDto = new JwtDto(userDto, pair.accessToken());
 
         Cache cache = cacheManager.getCache("userListCache");
         if (cache != null) {
             cache.evict("all");
         }
+
+        sseService.broadcast("users.updated", userDto);
 
         response.setStatus(HttpServletResponse.SC_OK);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
