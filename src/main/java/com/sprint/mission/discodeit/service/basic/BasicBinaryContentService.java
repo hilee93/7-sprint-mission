@@ -146,7 +146,7 @@ public class BasicBinaryContentService implements BinaryContentService {
 
         BinaryContentResponseDto dto = binaryContentMapper.toDto(saved);
         BinaryContentEventDto eventDto = new BinaryContentEventDto(saved.getId(), saved.getStatus());
-        sseService.broadcast("binaryContent.updated", eventDto);
+        sseService.broadcast("binaryContents.updated", eventDto);
 
         return dto;
     }

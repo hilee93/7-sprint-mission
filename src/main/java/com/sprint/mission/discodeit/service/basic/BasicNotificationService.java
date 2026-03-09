@@ -72,7 +72,7 @@ public class BasicNotificationService implements NotificationService {
         Notification saved = notificationRepository.save(notification);
         NotificationDto dto = notificationMapper.toDto(saved);
 
-        sseService.send(List.of(receiverId), "notification.created", dto);
+        sseService.send(List.of(receiverId), "notifications.created", dto);
 
         return dto;
     }
