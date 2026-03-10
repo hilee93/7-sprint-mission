@@ -7,7 +7,6 @@ COPY . .
 RUN chmod +x ./gradlew
 
 RUN ./gradlew --no-daemon clean bootJar -x test
-# RUN ./gradlew clean build -x test
 
 
 FROM amazoncorretto:17
@@ -16,19 +15,11 @@ WORKDIR /app
 
 ENV TZ=Asia/Seoul \
     PROJECT_NAME=discodeit \
-    PROJECT_VERSION=1.2-M8 \
     JVM_OPTS="" \
-    SERVER_PORT=80
+    SERVER_PORT=8080
 
-#RUN apk add --no-cache curl tzdata
+EXPOSE 8080
 
-EXPOSE 80
+COPY --from=build /app/build/libs/*.jar /app/app.jar
 
-ARG PROJECT_NAME=discodeit
-ARG PROJECT_VERSION=1.2-M8
-
-COPY --from=build /app/build/libs/${PROJECT_NAME}-${PROJECT_VERSION}.jar /app/${PROJECT_NAME}-${PROJECT_VERSION}.jar
-
-CMD ["sh", "-c", "exec java $JVM_OPTS -jar /app/${PROJECT_NAME}-${PROJECT_VERSION}.jar --server.port=${SERVER_PORT}"]
-
-#ENTRYPOINT ["java","-jar","app.jar"]
+CMD ["sh", "-c", "exec java $JVM_OPTS -jar /app/app.jar --server.port=${SERVER_PORT}"]
