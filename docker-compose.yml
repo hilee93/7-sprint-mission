@@ -8,7 +8,7 @@ services:
     container_name: discodeit-reverse-proxy
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "3000:80"
     networks:
@@ -38,6 +38,11 @@ services:
         condition: service_healthy
       broker:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 15
     volumes:
       - binary_content_storage:/app/storage
     networks:
@@ -84,6 +89,7 @@ services:
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@broker:29093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
